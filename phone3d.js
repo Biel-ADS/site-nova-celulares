@@ -38,11 +38,13 @@
   const group = new THREE.Group();
   scene.add(group);
 
-  // Manual image loading (not THREE.TextureLoader): the loader sets
-  // img.crossOrigin, which silently fails to fetch local files opened via
-  // file:// — the texture never loads and only the solid frame mesh shows
-  // (the "orange brick" bug). Plain Image() with no crossOrigin works locally.
-  function loadTexture(src) {
+  // Textures are loaded from base64 data: URIs (phone-textures.js), not
+  // relative file paths: Chrome's WebGL blocks texImage2D from any local
+  // file opened via file://, treating each file as a tainted cross-origin
+  // source — that's what caused the solid-color "orange brick" (only the
+  // frame mesh rendered, front/back photos never uploaded to the GPU).
+  // data: URIs have no origin, so they aren't subject to that block.
+  function loadTexture(dataUri) {
     const texture = new THREE.Texture();
     texture.anisotropy = 4;
     const img = new Image();
@@ -50,11 +52,12 @@
       texture.image = img;
       texture.needsUpdate = true;
     };
-    img.src = src;
+    img.src = dataUri;
     return texture;
   }
-  const frontTex = loadTexture("iphone17-front.png");
-  const backTex = loadTexture("iphone17-back.png");
+  const tex = window.PHONE_TEXTURES || {};
+  const frontTex = loadTexture(tex.front || "iphone17-front.png");
+  const backTex = loadTexture(tex.back || "iphone17-back.png");
 
   const faceGeo = new THREE.PlaneGeometry(W, H);
 
@@ -107,9 +110,9 @@
   });
   frameGeo.translate(0, 0, -DEPTH / 2);
   const frameMat = new THREE.MeshStandardMaterial({
-    color: 0xd9773f,
-    roughness: 0.3,
-    metalness: 0.75,
+    color: 0xe8620f,
+    roughness: 0.22,
+    metalness: 0.85,
   });
   const frameMesh = new THREE.Mesh(frameGeo, frameMat);
   group.add(frameMesh);
