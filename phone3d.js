@@ -38,12 +38,23 @@
   const group = new THREE.Group();
   scene.add(group);
 
-  const loader = new THREE.TextureLoader();
-  const frontTex = loader.load("iphone17-front.png");
-  const backTex = loader.load("iphone17-back.png");
-  [frontTex, backTex].forEach((t) => {
-    t.anisotropy = 4;
-  });
+  // Manual image loading (not THREE.TextureLoader): the loader sets
+  // img.crossOrigin, which silently fails to fetch local files opened via
+  // file:// — the texture never loads and only the solid frame mesh shows
+  // (the "orange brick" bug). Plain Image() with no crossOrigin works locally.
+  function loadTexture(src) {
+    const texture = new THREE.Texture();
+    texture.anisotropy = 4;
+    const img = new Image();
+    img.onload = () => {
+      texture.image = img;
+      texture.needsUpdate = true;
+    };
+    img.src = src;
+    return texture;
+  }
+  const frontTex = loadTexture("iphone17-front.png");
+  const backTex = loadTexture("iphone17-back.png");
 
   const faceGeo = new THREE.PlaneGeometry(W, H);
 
