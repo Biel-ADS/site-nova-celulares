@@ -13,6 +13,7 @@
     canvas: canvas,
     alpha: true,
     antialias: true,
+    logarithmicDepthBuffer: true,
   });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
@@ -68,7 +69,7 @@
     metalness: 0.1,
   });
   const frontMesh = new THREE.Mesh(faceGeo, frontMat);
-  frontMesh.position.z = DEPTH / 2 + 0.001;
+  frontMesh.position.z = DEPTH / 2 + 0.03;
   group.add(frontMesh);
 
   const backMat = new THREE.MeshStandardMaterial({
@@ -78,7 +79,7 @@
     metalness: 0.15,
   });
   const backMesh = new THREE.Mesh(faceGeo, backMat);
-  backMesh.position.z = -DEPTH / 2 - 0.001;
+  backMesh.position.z = -DEPTH / 2 - 0.03;
   backMesh.rotation.y = Math.PI;
   group.add(backMesh);
 
