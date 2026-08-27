@@ -1,138 +1,27 @@
 (function () {
-  const canvas = document.getElementById("phone3dCanvas");
-  const stage = document.getElementById("phoneTilt");
+  const tilt = document.getElementById("phoneTilt");
   const heroSection = document.getElementById("hero");
-  if (!canvas || !stage || !heroSection || typeof THREE === "undefined") return;
+  if (!tilt || !heroSection) return;
 
-  // ---------- scene ----------
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
-  camera.position.set(0, 0, 13);
+  const baseX = 6; // deg
+  const baseY = -22; // deg
 
-  const renderer = new THREE.WebGLRenderer({
-    canvas: canvas,
-    alpha: true,
-    antialias: true,
-    logarithmicDepthBuffer: true,
-  });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  let mouseX = 0; // -1..1
+  let mouseY = 0; // -1..1
+  let scrollTiltY = 0; // extra deg from scroll progress
 
-  // ---------- lights (key + fill + rim, to react to rotation like the photo reference) ----------
-  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-  const key = new THREE.DirectionalLight(0xfff3e6, 1.1);
-  key.position.set(3, 4, 5);
-  scene.add(key);
-  const rim = new THREE.DirectionalLight(0x9fb4ff, 0.6);
-  rim.position.set(-4, -2, -3);
-  scene.add(rim);
-  const fill = new THREE.DirectionalLight(0xffffff, 0.35);
-  fill.position.set(-3, 2, 4);
-  scene.add(fill);
-
-  // ---------- iPhone group: front/back photos as flat, undistorted planes
-  // (matches the real photo aspect ratio, no UV stretching) + a solid metal
-  // frame slab between them for genuine 3D depth/edges/shading. ----------
-  const W = 2.6;
-  const H = W * (707 / 344);
-  const DEPTH = 0.22;
-
-  const group = new THREE.Group();
-  scene.add(group);
-
-  // Textures are loaded from base64 data: URIs (phone-textures.js), not
-  // relative file paths: Chrome's WebGL blocks texImage2D from any local
-  // file opened via file://, treating each file as a tainted cross-origin
-  // source — that's what caused the solid-color "orange brick" (only the
-  // frame mesh rendered, front/back photos never uploaded to the GPU).
-  // data: URIs have no origin, so they aren't subject to that block.
-  function loadTexture(dataUri) {
-    const texture = new THREE.Texture();
-    texture.anisotropy = 4;
-    const img = new Image();
-    img.onload = () => {
-      texture.image = img;
-      texture.needsUpdate = true;
-    };
-    img.src = dataUri;
-    return texture;
+  function apply() {
+    const rx = baseX - mouseY * 10;
+    const ry = baseY + mouseX * 16 + scrollTiltY;
+    tilt.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
   }
-  const tex = window.PHONE_TEXTURES || {};
-  const frontTex = loadTexture(tex.front || "iphone17-front.png");
-  const backTex = loadTexture(tex.back || "iphone17-back.png");
-
-  const faceGeo = new THREE.PlaneGeometry(W, H);
-
-  const frontMat = new THREE.MeshStandardMaterial({
-    map: frontTex,
-    transparent: false,
-    alphaTest: 0.5,
-    roughness: 0.25,
-    metalness: 0.1,
-  });
-  const frontMesh = new THREE.Mesh(faceGeo, frontMat);
-  frontMesh.position.z = DEPTH / 2 + 0.03;
-  group.add(frontMesh);
-
-  const backMat = new THREE.MeshStandardMaterial({
-    map: backTex,
-    transparent: false,
-    alphaTest: 0.5,
-    roughness: 0.4,
-    metalness: 0.15,
-  });
-  const backMesh = new THREE.Mesh(faceGeo, backMat);
-  backMesh.position.z = -DEPTH / 2 - 0.03;
-  backMesh.rotation.y = Math.PI;
-  group.add(backMesh);
-
-  // Rounded-rect frame slab, slightly inset from the photo edges, brushed-metal
-  // orange titanium to match the iPhone 17 colorway.
-  const rr = (w, h, r) => {
-    const s = new THREE.Shape();
-    const x = -w / 2,
-      y = -h / 2;
-    s.moveTo(x, y + r);
-    s.lineTo(x, y + h - r);
-    s.quadraticCurveTo(x, y + h, x + r, y + h);
-    s.lineTo(x + w - r, y + h);
-    s.quadraticCurveTo(x + w, y + h, x + w, y + h - r);
-    s.lineTo(x + w, y + r);
-    s.quadraticCurveTo(x + w, y, x + w - r, y);
-    s.lineTo(x + r, y);
-    s.quadraticCurveTo(x, y, x, y + r);
-    return s;
-  };
-  const frameShape = rr(W * 0.965, H * 0.965, 0.34);
-  const frameGeo = new THREE.ExtrudeGeometry(frameShape, {
-    depth: DEPTH,
-    bevelEnabled: true,
-    bevelThickness: 0.02,
-    bevelSize: 0.015,
-    bevelSegments: 3,
-    curveSegments: 12,
-  });
-  frameGeo.translate(0, 0, -DEPTH / 2);
-  const frameMat = new THREE.MeshStandardMaterial({
-    color: 0xe8620f,
-    roughness: 0.22,
-    metalness: 0.85,
-  });
-  const frameMesh = new THREE.Mesh(frameGeo, frameMat);
-  group.add(frameMesh);
-
-  // ---------- interaction: mouse parallax + scroll tilt drive real rotation/lighting ----------
-  const baseX = 0.1;
-  const baseY = -0.38;
-  let mouseX = 0,
-    mouseY = 0,
-    scrollTiltY = 0,
-    autoSpin = 0;
 
   window.addEventListener(
     "pointermove",
     (e) => {
       mouseX = (e.clientX / window.innerWidth) * 2 - 1;
       mouseY = (e.clientY / window.innerHeight) * 2 - 1;
+      apply();
     },
     { passive: true }
   );
@@ -140,33 +29,10 @@
   function onScroll() {
     const rect = heroSection.getBoundingClientRect();
     const progress = Math.min(Math.max(-rect.top / (rect.height || 1), 0), 1);
-    scrollTiltY = progress * 0.7;
+    scrollTiltY = progress * 40;
+    apply();
   }
   window.addEventListener("scroll", onScroll, { passive: true });
 
-  function resize() {
-    const rect = stage.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    renderer.setSize(rect.width, rect.height, false);
-    camera.aspect = rect.width / rect.height;
-    camera.updateProjectionMatrix();
-  }
-  window.addEventListener("resize", resize, { passive: true });
-  resize();
-
-  // Oscillates within a bounded arc instead of spinning a full 360°: past
-  // ~60° a flat photo-plane necessarily looks like a thin broken sliver
-  // (it's a 2D card, not a solid scan), so we never rotate into that range.
-  let floatT = 0;
-  function tick() {
-    floatT += 0.012;
-    autoSpin += 0.006;
-    const swing = Math.sin(autoSpin) * 0.5;
-    group.rotation.x = baseX - mouseY * 0.16;
-    group.rotation.y = baseY + mouseX * 0.25 + scrollTiltY + swing;
-    group.position.y = Math.sin(floatT) * 0.18;
-    renderer.render(scene, camera);
-    requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
+  apply();
 })();
