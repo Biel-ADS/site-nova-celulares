@@ -1,5 +1,18 @@
 gsap.registerPlugin(ScrollTrigger);
 
+/* ---------- Preloader ---------- */
+document.body.style.overflow = "hidden";
+window.addEventListener("load", () => {
+  const fill = document.getElementById("preloaderFill");
+  const pre = document.getElementById("preloader");
+  requestAnimationFrame(() => { fill.style.width = "100%"; });
+  setTimeout(() => {
+    pre.classList.add("done");
+    document.body.style.overflow = "";
+  }, 900);
+});
+setTimeout(() => { document.body.style.overflow = ""; }, 1600);
+
 /* ---------- Header state on scroll ---------- */
 const header = document.getElementById("siteHeader");
 ScrollTrigger.create({
