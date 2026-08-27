@@ -7,7 +7,7 @@
   // ---------- scene ----------
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
-  camera.position.set(0, 0, 9);
+  camera.position.set(0, 0, 13);
 
   const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
@@ -64,7 +64,8 @@
 
   const frontMat = new THREE.MeshStandardMaterial({
     map: frontTex,
-    transparent: true,
+    transparent: false,
+    alphaTest: 0.5,
     roughness: 0.25,
     metalness: 0.1,
   });
@@ -74,7 +75,8 @@
 
   const backMat = new THREE.MeshStandardMaterial({
     map: backTex,
-    transparent: true,
+    transparent: false,
+    alphaTest: 0.5,
     roughness: 0.4,
     metalness: 0.15,
   });
@@ -152,12 +154,16 @@
   window.addEventListener("resize", resize, { passive: true });
   resize();
 
+  // Oscillates within a bounded arc instead of spinning a full 360°: past
+  // ~60° a flat photo-plane necessarily looks like a thin broken sliver
+  // (it's a 2D card, not a solid scan), so we never rotate into that range.
   let floatT = 0;
   function tick() {
     floatT += 0.012;
-    autoSpin += 0.0035;
-    group.rotation.x = baseX - mouseY * 0.18;
-    group.rotation.y = baseY + mouseX * 0.3 + scrollTiltY + autoSpin;
+    autoSpin += 0.006;
+    const swing = Math.sin(autoSpin) * 0.5;
+    group.rotation.x = baseX - mouseY * 0.16;
+    group.rotation.y = baseY + mouseX * 0.25 + scrollTiltY + swing;
     group.position.y = Math.sin(floatT) * 0.18;
     renderer.render(scene, camera);
     requestAnimationFrame(tick);
