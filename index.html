@@ -38,12 +38,7 @@
       <div class="phone3d-glow"></div>
       <div class="phone3d-float">
         <div class="phone3d-tilt" id="phoneTilt">
-          <div class="phone-photo-spin">
-            <img class="phone-photo-face" src="iphone17-front.png" alt="iPhone 17 Pro">
-            <div class="phone-wire phone-wire-front"></div>
-            <img class="phone-photo-face phone-photo-back" src="iphone17-back.png" alt="">
-            <div class="phone-wire phone-wire-back"></div>
-          </div>
+          <canvas id="phone3dCanvas" class="phone3d-canvas" aria-label="iPhone 17 Pro em 3D"></canvas>
         </div>
       </div>
     </div>
@@ -267,6 +262,7 @@
 
 <script src="https://unpkg.com/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://unpkg.com/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
 <script src="phone3d.js"></script>
 <script src="script.js"></script>
 </body>
