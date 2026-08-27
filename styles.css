@@ -136,8 +136,8 @@ section{position:relative;}
   animation:phoneSpin 18s linear infinite;
 }
 @keyframes phoneSpin{
-  from{transform:rotateY(0deg);}
-  to{transform:rotateY(360deg);}
+  from{transform:rotateY(180deg);}
+  to{transform:rotateY(540deg);}
 }
 .phone-photo-face{
   position:absolute;inset:0;width:100%;height:100%;
