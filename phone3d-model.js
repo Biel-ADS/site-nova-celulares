@@ -171,7 +171,7 @@
       model.position.sub(center);
 
       const maxDim = Math.max(size.x, size.y, size.z) || 1;
-      model.scale.setScalar(1.85 / maxDim);
+      model.scale.setScalar(1.55 / maxDim);
       model.rotation.set(0.08, 0, 0.03);
 
       // Escurece um pouco o laranja da carcaça, sem mexer em vidro/tela (mantém brilho e reflexo do display)
