@@ -128,8 +128,22 @@
       model.position.sub(center);
 
       const maxDim = Math.max(size.x, size.y, size.z) || 1;
-      model.scale.setScalar(2.6 / maxDim);
+      model.scale.setScalar(3.05 / maxDim); // um pouco maior que antes
       model.rotation.set(0.08, 0, 0.03);
+
+      // Escurece um pouco o laranja da carcaça, sem mexer em vidro/tela (mantém brilho e reflexo do display)
+      model.traverse((node) => {
+        if (!node.isMesh || !node.material) return;
+        const materials = Array.isArray(node.material) ? node.material : [node.material];
+        materials.forEach((mat) => {
+          if (!mat.color) return;
+          const isGlassOrScreen =
+            (mat.transparent && mat.opacity < 0.95) ||
+            (mat.emissive && mat.emissiveIntensity > 0.05);
+          if (isGlassOrScreen) return;
+          mat.color.multiplyScalar(0.78);
+        });
+      });
 
       scene.add(model);
       resize();
