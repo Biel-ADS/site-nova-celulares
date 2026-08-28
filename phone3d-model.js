@@ -53,6 +53,40 @@
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.3));
 
+  // Luz sutil que acompanha o mouse: só desloca de posição, sem aumentar o brilho geral,
+  // criando pequenos reflexos móveis no vidro e nas bordas metálicas.
+  const mouseLight = new THREE.PointLight(0xffffff, 0.35, 9, 2);
+  mouseLight.position.set(0, 0.4, 3.4);
+  scene.add(mouseLight);
+
+  // Sombra difusa atrás/abaixo do iPhone, para reforçar que ele está flutuando
+  // (sem tocar em nenhuma superfície) — um blob desfocado, nunca um contato nítido.
+  function makeShadowTexture() {
+    const size = 256;
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const ctx = c.getContext("2d");
+    const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    g.addColorStop(0, "rgba(0,0,0,0.55)");
+    g.addColorStop(0.55, "rgba(0,0,0,0.22)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    return tex;
+  }
+  const shadowMat = new THREE.MeshBasicMaterial({
+    map: makeShadowTexture(),
+    transparent: true,
+    opacity: 0.16,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const shadowMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.4), shadowMat);
+  shadowMesh.position.set(0, -1.15, -0.9);
+  scene.add(shadowMesh);
+
   let model = null;
   let raf = null;
   const clock = new THREE.Clock();
@@ -76,7 +110,16 @@
       model.position.y = Math.sin(t * 0.6) * 0.12; // flutuação vertical suave
       model.rotation.x = 0.08 + Math.sin(t * 0.35) * 0.035 + mouseY * 0.05; // inclinação dinâmica
       model.rotation.z = 0.03 + Math.cos(t * 0.28) * 0.02 + mouseX * 0.04;
+
+      // sombra acompanha a flutuação: quanto mais alto o iPhone, mais fraca/afastada a sombra
+      shadowMesh.position.y = -1.15 - model.position.y * 0.18;
+      shadowMat.opacity = 0.16 - Math.max(0, model.position.y) * 0.05;
     }
+
+    // luz sutil seguindo o mouse, com leve suavização
+    mouseLight.position.x += (mouseX * 1.3 - mouseLight.position.x) * 0.06;
+    mouseLight.position.y += (0.4 - mouseY * 1.1 - mouseLight.position.y) * 0.06;
+
     renderer.render(scene, camera);
   }
 
