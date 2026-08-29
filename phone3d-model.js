@@ -211,10 +211,16 @@
       scene.add(model);
       resize();
 
-      spinIntroStart = clock.getElapsedTime(); // giro rápido começa só quando o iPhone aparece de fato
       wrap.classList.add("is-ready");
       stage.classList.add("model-ready");
       startLoop();
+
+      // o wrap do canvas tem "transition: opacity 1s ease" (fade-in) — espera
+      // esse fade terminar antes de iniciar o giro, senão a volta rápida
+      // acontece enquanto o iPhone ainda está quase transparente aparecendo.
+      setTimeout(() => {
+        spinIntroStart = clock.getElapsedTime();
+      }, 1000);
     },
     undefined,
     (err) => {
