@@ -92,16 +92,21 @@
   const clock = new THREE.Clock();
   let mouseX = 0;
   let mouseY = 0;
+  let elapsedT = 0; // tempo próprio, avança só em frames de fato renderizados (imune a pausas do IntersectionObserver)
 
-  // Apresentação premium de entrada: no primeiro carregamento, o iPhone dá uma
-  // volta rápida de ~360° no eixo Y com aceleração e desaceleração suaves
-  // (curva em forma de sino), depois emenda sem costura na rotação lenta contínua.
+  // Apresentação premium de entrada: máquina de estados com 2 fases.
+  // "intro": uma volta exata de 360° no eixo Y em 1s, com easing suave (ease-in-out).
+  // "normal": rotação lenta contínua de sempre, retomada exatamente do ângulo
+  // onde o intro parou (sem pulo, sem reinício, sem travar).
   const baseSpin = reduceMotion ? 0.05 : 0.28; // velocidade normal (igual à de sempre)
-  const spinIntroDuration = reduceMotion ? 0 : 1.0; // 0,8–1,2s
-  const spinIntroPeak = reduceMotion ? 0 : (Math.PI * Math.PI) / spinIntroDuration; // pico de velocidade extra em t = duration/2
-  let spinIntroStart = null;
-  let rotY = 0;
-  let prevT = 0;
+  const introDuration = reduceMotion ? 0 : 1; // 1 segundo exato
+  let phoneState = "idle"; // idle -> intro -> normal
+  let introElapsed = 0;
+  let normalRotY = 0;
+
+  function easeInOutCubic(x) {
+    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  }
 
   function resize() {
     const w = wrap.clientWidth;
@@ -114,19 +119,23 @@
 
   function animate() {
     raf = requestAnimationFrame(animate);
-    const t = clock.getElapsedTime();
-    const introT = spinIntroStart === null ? spinIntroDuration : t - spinIntroStart;
-    const dt = Math.min(Math.max(t - prevT, 0), 0.05); // clamp evita salto ao voltar de aba/scroll oculto
-    prevT = t;
+    const dt = Math.min(clock.getDelta(), 0.05); // dt real do frame, clamp evita salto ao voltar de aba oculta
+    elapsedT += dt;
+    const t = elapsedT;
 
     if (model) {
-      let spinSpeed = baseSpin;
-      if (introT < spinIntroDuration) {
-        // curva em sino: velocidade parte de baseSpin, acelera, desacelera e volta a baseSpin sem costura
-        spinSpeed += spinIntroPeak * Math.sin((Math.PI * introT) / spinIntroDuration);
+      if (phoneState === "intro") {
+        introElapsed += dt;
+        const x = introDuration > 0 ? Math.min(introElapsed / introDuration, 1) : 1;
+        model.rotation.y = easeInOutCubic(x) * Math.PI * 2; // 1 volta exata (360°) com ease-in-out
+        if (x >= 1) {
+          phoneState = "normal";
+          normalRotY = model.rotation.y; // continua exatamente daqui, sem pulo nem reinício
+        }
+      } else if (phoneState === "normal") {
+        normalRotY += baseSpin * dt;
+        model.rotation.y = normalRotY; // rotação lenta contínua de sempre
       }
-      rotY += spinSpeed * dt;
-      model.rotation.y = rotY; // volta rápida inicial (~360°) que emenda na rotação lenta contínua
       model.position.y = Math.sin(t * 0.6) * 0.12; // flutuação vertical suave
       model.rotation.x = 0.08 + Math.sin(t * 0.35) * 0.035 + mouseY * 0.05; // inclinação dinâmica
       model.rotation.z = 0.03 + Math.cos(t * 0.28) * 0.02 + mouseX * 0.04;
@@ -213,14 +222,8 @@
 
       wrap.classList.add("is-ready");
       stage.classList.add("model-ready");
+      phoneState = introDuration > 0 ? "intro" : "normal"; // começa o giro assim que o .glb está 100% pronto
       startLoop();
-
-      // o wrap do canvas tem "transition: opacity 1s ease" (fade-in) — espera
-      // esse fade terminar antes de iniciar o giro, senão a volta rápida
-      // acontece enquanto o iPhone ainda está quase transparente aparecendo.
-      setTimeout(() => {
-        spinIntroStart = clock.getElapsedTime();
-      }, 1000);
     },
     undefined,
     (err) => {

@@ -178,7 +178,7 @@ section{position:relative;}
   position:absolute;inset:0;
   display:flex;align-items:center;justify-content:center;
   opacity:0;
-  transition:opacity 1s ease;
+  transition:opacity .3s ease;
   pointer-events:none;
 }
 .phone3d-canvas-wrap.is-ready{opacity:1;}
