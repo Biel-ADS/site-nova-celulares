@@ -115,10 +115,10 @@ const brandFilter = document.getElementById("brandFilter");
 if (brandFilter) {
   const cards = gsap.utils.toArray(".model-card");
   brandFilter.addEventListener("click", (e) => {
-    const btn = e.target.closest(".brand-btn");
+    const btn = e.target.closest(".chip");
     if (!btn) return;
 
-    brandFilter.querySelectorAll(".brand-btn").forEach((b) => b.classList.remove("is-active"));
+    brandFilter.querySelectorAll(".chip").forEach((b) => b.classList.remove("is-active"));
     btn.classList.add("is-active");
 
     const brand = btn.dataset.brand;
