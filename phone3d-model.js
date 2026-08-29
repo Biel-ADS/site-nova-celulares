@@ -115,8 +115,7 @@
   function animate() {
     raf = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
-    if (spinIntroStart === null) spinIntroStart = t; // marca o carregamento inicial (só acontece uma vez)
-    const introT = t - spinIntroStart;
+    const introT = spinIntroStart === null ? spinIntroDuration : t - spinIntroStart;
     const dt = Math.min(Math.max(t - prevT, 0), 0.05); // clamp evita salto ao voltar de aba/scroll oculto
     prevT = t;
 
@@ -212,6 +211,7 @@
       scene.add(model);
       resize();
 
+      spinIntroStart = clock.getElapsedTime(); // giro rápido começa só quando o iPhone aparece de fato
       wrap.classList.add("is-ready");
       stage.classList.add("model-ready");
       startLoop();
