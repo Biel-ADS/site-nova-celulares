@@ -239,6 +239,19 @@ section{position:relative;}
 
 /* ---------- Models ---------- */
 .models{padding-bottom:clamp(60px,10vw,120px);}
+.brand-filter{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:10px;
+  max-width:900px;margin:0 auto;padding:0 clamp(20px,5vw,56px) clamp(36px,5vw,54px);
+}
+.brand-btn{
+  font-family:var(--sans);font-size:.85rem;font-weight:600;letter-spacing:.01em;
+  color:var(--muted);background:transparent;border:1px solid var(--line);
+  padding:10px 22px;border-radius:999px;cursor:pointer;
+  transition:background .35s var(--ease),color .35s var(--ease),border-color .35s var(--ease);
+}
+.brand-btn:hover{color:var(--ink);border-color:var(--ink);}
+.brand-btn.is-active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.model-card.is-hidden{display:none;}
 .model-grid{
   display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
   max-width:1400px;margin:0 auto;padding:0 clamp(20px,5vw,56px);

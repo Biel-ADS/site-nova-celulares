@@ -110,6 +110,32 @@ gsap.utils.toArray(".model-card").forEach((card, i) => {
   );
 });
 
+/* ---------- Brand catalog filter ---------- */
+const brandFilter = document.getElementById("brandFilter");
+if (brandFilter) {
+  const cards = gsap.utils.toArray(".model-card");
+  brandFilter.addEventListener("click", (e) => {
+    const btn = e.target.closest(".brand-btn");
+    if (!btn) return;
+
+    brandFilter.querySelectorAll(".brand-btn").forEach((b) => b.classList.remove("is-active"));
+    btn.classList.add("is-active");
+
+    const brand = btn.dataset.brand;
+    cards.forEach((card) => {
+      const match = brand === "todos" || card.dataset.brand === brand;
+      gsap.to(card, {
+        opacity: match ? 1 : 0,
+        scale: match ? 1 : 0.94,
+        duration: 0.3,
+        ease: "power2.out",
+        onStart: () => { if (match) card.classList.remove("is-hidden"); },
+        onComplete: () => { if (!match) card.classList.add("is-hidden"); },
+      });
+    });
+  });
+}
+
 /* ---------- Story section parallax images ---------- */
 gsap.utils.toArray(".story-media img").forEach((img) => {
   gsap.fromTo(
