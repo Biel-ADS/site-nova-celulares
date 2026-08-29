@@ -92,6 +92,30 @@
   const clock = new THREE.Clock();
   let mouseX = 0;
   let mouseY = 0;
+  let elapsedT = 0; // tempo próprio, avança só em frames de fato renderizados (imune a pausas do IntersectionObserver)
+
+  // Apresentação premium de entrada: máquina de estados com 3 fases.
+  // "intro": uma volta exata de 360° no eixo Y em 1s, com easing suave (ease-in-out),
+  //          terminando em velocidade ~0 (fim natural do ease-in-out).
+  // "settle": 1s (dentro da janela 0,8–1,2s pedida) onde a velocidade sobe de 0 até
+  //           a velocidade normal com easing (ease-out) — como um produto físico
+  //           assentando suavemente na rotação de cruzeiro, sem corte perceptível.
+  // "normal": rotação lenta contínua de sempre, na mesma velocidade em que o
+  //           "settle" terminou (sem pulo, sem reinício, sem travar).
+  const baseSpin = reduceMotion ? 0.05 : 0.28; // velocidade normal (igual à de sempre)
+  const introDuration = reduceMotion ? 0 : 1; // 1 segundo exato para o giro de 360°
+  const settleDuration = reduceMotion ? 0 : 1; // 1 segundo para assentar na velocidade normal
+  let phoneState = "idle"; // idle -> intro -> settle -> normal
+  let introElapsed = 0;
+  let settleElapsed = 0;
+  let normalRotY = 0;
+
+  function easeInOutCubic(x) {
+    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  }
+  function easeOutCubic(x) {
+    return 1 - Math.pow(1 - x, 3);
+  }
 
   function resize() {
     const w = wrap.clientWidth;
@@ -104,9 +128,31 @@
 
   function animate() {
     raf = requestAnimationFrame(animate);
-    const t = clock.getElapsedTime();
+    const dt = Math.min(clock.getDelta(), 0.05); // dt real do frame, clamp evita salto ao voltar de aba oculta
+    elapsedT += dt;
+    const t = elapsedT;
+
     if (model) {
-      model.rotation.y = t * (reduceMotion ? 0.05 : 0.28); // rotação lenta e contínua no eixo Y
+      if (phoneState === "intro") {
+        introElapsed += dt;
+        const x = introDuration > 0 ? Math.min(introElapsed / introDuration, 1) : 1;
+        model.rotation.y = easeInOutCubic(x) * Math.PI * 2; // 1 volta exata (360°) com ease-in-out
+        if (x >= 1) {
+          phoneState = "settle";
+          settleElapsed = 0;
+          normalRotY = model.rotation.y; // continua exatamente daqui, sem pulo nem reinício
+        }
+      } else if (phoneState === "settle") {
+        settleElapsed += dt;
+        const s = settleDuration > 0 ? Math.min(settleElapsed / settleDuration, 1) : 1;
+        const speed = baseSpin * easeOutCubic(s); // sobe de 0 até baseSpin suavemente (sem corte)
+        normalRotY += speed * dt;
+        model.rotation.y = normalRotY;
+        if (s >= 1) phoneState = "normal";
+      } else if (phoneState === "normal") {
+        normalRotY += baseSpin * dt;
+        model.rotation.y = normalRotY; // rotação lenta contínua de sempre
+      }
       model.position.y = Math.sin(t * 0.6) * 0.12; // flutuação vertical suave
       model.rotation.x = 0.08 + Math.sin(t * 0.35) * 0.035 + mouseY * 0.05; // inclinação dinâmica
       model.rotation.z = 0.03 + Math.cos(t * 0.28) * 0.02 + mouseX * 0.04;
@@ -193,6 +239,7 @@
 
       wrap.classList.add("is-ready");
       stage.classList.add("model-ready");
+      phoneState = introDuration > 0 ? "intro" : "normal"; // começa o giro assim que o .glb está 100% pronto
       startLoop();
     },
     undefined,
