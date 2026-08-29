@@ -93,6 +93,16 @@
   let mouseX = 0;
   let mouseY = 0;
 
+  // Apresentação premium de entrada: no primeiro carregamento, o iPhone dá uma
+  // volta rápida de ~360° no eixo Y com aceleração e desaceleração suaves
+  // (curva em forma de sino), depois emenda sem costura na rotação lenta contínua.
+  const baseSpin = reduceMotion ? 0.05 : 0.28; // velocidade normal (igual à de sempre)
+  const spinIntroDuration = reduceMotion ? 0 : 1.0; // 0,8–1,2s
+  const spinIntroPeak = reduceMotion ? 0 : (Math.PI * Math.PI) / spinIntroDuration; // pico de velocidade extra em t = duration/2
+  let spinIntroStart = null;
+  let rotY = 0;
+  let prevT = 0;
+
   function resize() {
     const w = wrap.clientWidth;
     const h = wrap.clientHeight;
@@ -105,8 +115,19 @@
   function animate() {
     raf = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
+    if (spinIntroStart === null) spinIntroStart = t; // marca o carregamento inicial (só acontece uma vez)
+    const introT = t - spinIntroStart;
+    const dt = Math.min(Math.max(t - prevT, 0), 0.05); // clamp evita salto ao voltar de aba/scroll oculto
+    prevT = t;
+
     if (model) {
-      model.rotation.y = t * (reduceMotion ? 0.05 : 0.28); // rotação lenta e contínua no eixo Y
+      let spinSpeed = baseSpin;
+      if (introT < spinIntroDuration) {
+        // curva em sino: velocidade parte de baseSpin, acelera, desacelera e volta a baseSpin sem costura
+        spinSpeed += spinIntroPeak * Math.sin((Math.PI * introT) / spinIntroDuration);
+      }
+      rotY += spinSpeed * dt;
+      model.rotation.y = rotY; // volta rápida inicial (~360°) que emenda na rotação lenta contínua
       model.position.y = Math.sin(t * 0.6) * 0.12; // flutuação vertical suave
       model.rotation.x = 0.08 + Math.sin(t * 0.35) * 0.035 + mouseY * 0.05; // inclinação dinâmica
       model.rotation.z = 0.03 + Math.cos(t * 0.28) * 0.02 + mouseX * 0.04;
