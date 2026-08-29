@@ -93,15 +93,6 @@
   let mouseX = 0;
   let mouseY = 0;
 
-  // Giro rápido de entrada: ao abrir/atualizar a página, o iPhone dá um 360°
-  // rápido e desacelera com fluidez até a velocidade normal de rotação.
-  const baseSpin = reduceMotion ? 0.05 : 0.28; // mesma velocidade normal de antes
-  const spinIntroDuration = reduceMotion ? 0 : 1.1; // segundos até acomodar na velocidade normal
-  const spinIntroExtra = (6 * Math.PI) / (spinIntroDuration || 1); // pico de velocidade extra no início
-  let spinIntroStart = null;
-  let rotY = 0;
-  let prevT = 0;
-
   function resize() {
     const w = wrap.clientWidth;
     const h = wrap.clientHeight;
@@ -114,19 +105,8 @@
   function animate() {
     raf = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
-    if (spinIntroStart === null) spinIntroStart = t; // marca o instante em que o giro passou a ser visível
-    const introT = t - spinIntroStart;
-    const dt = Math.min(Math.max(t - prevT, 0), 0.05); // clamp evita salto ao voltar de aba/scroll oculto
-    prevT = t;
-
     if (model) {
-      let spinSpeed = baseSpin;
-      if (introT < spinIntroDuration) {
-        const decay = 1 - introT / spinIntroDuration;
-        spinSpeed += spinIntroExtra * decay * decay; // desaceleração suave (ease-out) até a velocidade normal
-      }
-      rotY += spinSpeed * dt;
-      model.rotation.y = rotY; // giro rápido de entrada (360°) que acomoda fluidamente na rotação normal
+      model.rotation.y = t * (reduceMotion ? 0.05 : 0.28); // rotação lenta e contínua no eixo Y
       model.position.y = Math.sin(t * 0.6) * 0.12; // flutuação vertical suave
       model.rotation.x = 0.08 + Math.sin(t * 0.35) * 0.035 + mouseY * 0.05; // inclinação dinâmica
       model.rotation.z = 0.03 + Math.cos(t * 0.28) * 0.02 + mouseX * 0.04;
