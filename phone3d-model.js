@@ -1,7 +1,7 @@
 /* Modelo 3D real do iPhone 17 Pro Max (.glb), renderizado com Three.js + GLTFLoader.
-   Flutua sobre o design atual da hero, com fundo transparente. Se o WebGL ou o
-   modelo não carregar por qualquer motivo, o fallback CSS (phone3d.js + imagens)
-   continua visível — nada do design existente é removido. */
+   Flutua sobre o design atual da hero, com fundo transparente. Assim que o WebGL
+   confirma que está disponível, a imagem estática (fallback PNG) é escondida —
+   ela só permanece visível se o WebGL não estiver disponível (catch acima). */
 (function () {
   const stage = document.querySelector(".phone3d-stage");
   const wrap = document.getElementById("phone3dCanvasWrap");
@@ -20,6 +20,10 @@
   } catch (e) {
     return; // sem WebGL disponível: mantém o fallback CSS
   }
+
+  // Fallback PNG removido assim que o WebGL confirma que está disponível —
+  // não esperamos o .glb terminar de carregar para esconder a imagem estática.
+  stage.classList.add("model-ready");
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -94,28 +98,17 @@
   let mouseY = 0;
   let elapsedT = 0; // tempo próprio, avança só em frames de fato renderizados (imune a pausas do IntersectionObserver)
 
-  // Apresentação premium de entrada: máquina de estados com 3 fases.
-  // "intro": uma volta exata de 360° no eixo Y em 1s, com easing suave (ease-in-out),
-  //          terminando em velocidade ~0 (fim natural do ease-in-out).
-  // "settle": 1s (dentro da janela 0,8–1,2s pedida) onde a velocidade sobe de 0 até
-  //           a velocidade normal com easing (ease-out) — como um produto físico
-  //           assentando suavemente na rotação de cruzeiro, sem corte perceptível.
-  // "normal": rotação lenta contínua de sempre, na mesma velocidade em que o
-  //           "settle" terminou (sem pulo, sem reinício, sem travar).
+  // Apresentação premium de entrada: uma única função contínua de velocidade
+  // (sem máquina de estados, sem reinício de ângulo). A rotação sempre soma
+  // "baseSpin" (velocidade de cruzeiro) + um extra que decai em curva
+  // ease-out quart até virar zero — ou seja, a volta de 360° e a
+  // desaceleração são a MESMA curva contínua, sem costura entre elas.
   const baseSpin = reduceMotion ? 0.05 : 0.28; // velocidade normal (igual à de sempre)
-  const introDuration = reduceMotion ? 0 : 1; // 1 segundo exato para o giro de 360°
-  const settleDuration = reduceMotion ? 0 : 1; // 1 segundo para assentar na velocidade normal
-  let phoneState = "idle"; // idle -> intro -> settle -> normal
-  let introElapsed = 0;
-  let settleElapsed = 0;
-  let normalRotY = 0;
-
-  function easeInOutCubic(x) {
-    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
-  }
-  function easeOutCubic(x) {
-    return 1 - Math.pow(1 - x, 3);
-  }
+  const transientDuration = reduceMotion ? 0 : 2; // ~1s de giro visível + ~1s de desaceleração contínua
+  // pico calibrado para que a rotação extra acumulada ao longo da curva feche ~2π (360°)
+  const transientPeak = reduceMotion ? 0 : (10 * Math.PI) / transientDuration;
+  let transientStart = null; // marcado no instante em que o iPhone aparece de fato (modelo carregado)
+  let rotY = 0;
 
   function resize() {
     const w = wrap.clientWidth;
@@ -133,26 +126,16 @@
     const t = elapsedT;
 
     if (model) {
-      if (phoneState === "intro") {
-        introElapsed += dt;
-        const x = introDuration > 0 ? Math.min(introElapsed / introDuration, 1) : 1;
-        model.rotation.y = easeInOutCubic(x) * Math.PI * 2; // 1 volta exata (360°) com ease-in-out
-        if (x >= 1) {
-          phoneState = "settle";
-          settleElapsed = 0;
-          normalRotY = model.rotation.y; // continua exatamente daqui, sem pulo nem reinício
+      let speed = baseSpin;
+      if (transientStart !== null) {
+        const te = t - transientStart;
+        if (te < transientDuration) {
+          const remain = 1 - te / transientDuration;
+          speed += transientPeak * remain * remain * remain * remain; // desaceleração contínua ease-out quart
         }
-      } else if (phoneState === "settle") {
-        settleElapsed += dt;
-        const s = settleDuration > 0 ? Math.min(settleElapsed / settleDuration, 1) : 1;
-        const speed = baseSpin * easeOutCubic(s); // sobe de 0 até baseSpin suavemente (sem corte)
-        normalRotY += speed * dt;
-        model.rotation.y = normalRotY;
-        if (s >= 1) phoneState = "normal";
-      } else if (phoneState === "normal") {
-        normalRotY += baseSpin * dt;
-        model.rotation.y = normalRotY; // rotação lenta contínua de sempre
       }
+      rotY += speed * dt;
+      model.rotation.y = rotY; // nunca reinicia: soma contínua desde o início
       model.position.y = Math.sin(t * 0.6) * 0.12; // flutuação vertical suave
       model.rotation.x = 0.08 + Math.sin(t * 0.35) * 0.035 + mouseY * 0.05; // inclinação dinâmica
       model.rotation.z = 0.03 + Math.cos(t * 0.28) * 0.02 + mouseX * 0.04;
@@ -238,8 +221,7 @@
       resize();
 
       wrap.classList.add("is-ready");
-      stage.classList.add("model-ready");
-      phoneState = introDuration > 0 ? "intro" : "normal"; // começa o giro assim que o .glb está 100% pronto
+      transientStart = elapsedT; // giro + desaceleração começam assim que o iPhone aparece de fato
       startLoop();
     },
     undefined,
