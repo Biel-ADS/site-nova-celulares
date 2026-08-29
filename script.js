@@ -97,6 +97,18 @@ document.querySelectorAll(".reveal-up").forEach((el) => {
   );
 });
 
+/* ---------- iPhone color picker ---------- */
+document.querySelectorAll(".iphone-buy-colors").forEach((group) => {
+  const nameEl = group.parentElement.querySelector(".iphone-buy-color-name");
+  group.addEventListener("click", (e) => {
+    const dot = e.target.closest(".color-dot");
+    if (!dot) return;
+    group.querySelectorAll(".color-dot").forEach((d) => d.classList.remove("is-active"));
+    dot.classList.add("is-active");
+    if (nameEl) nameEl.textContent = dot.dataset.color;
+  });
+});
+
 /* Staggered iPhone buy rows */
 gsap.utils.toArray(".iphone-buy-row").forEach((row) => {
   gsap.fromTo(
