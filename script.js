@@ -97,15 +97,14 @@ document.querySelectorAll(".reveal-up").forEach((el) => {
   );
 });
 
-/* Staggered model grid cards */
-gsap.utils.toArray(".model-card").forEach((card, i) => {
+/* Staggered iPhone buy rows */
+gsap.utils.toArray(".iphone-buy-row").forEach((row) => {
   gsap.fromTo(
-    card,
+    row,
     { opacity: 0, y: 50 },
     {
       opacity: 1, y: 0, duration: 0.8, ease: "power3.out",
-      delay: (i % 3) * 0.08,
-      scrollTrigger: { trigger: card, start: "top 90%", toggleActions: "play none none reverse" },
+      scrollTrigger: { trigger: row, start: "top 90%", toggleActions: "play none none reverse" },
     }
   );
 });
